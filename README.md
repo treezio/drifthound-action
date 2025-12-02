@@ -21,11 +21,12 @@ A GitHub Action for running infrastructure drift detection with [DriftHound](htt
 Create a `drifthound.yaml` file in your repository root:
 
 ```yaml
-# Optional: Specify tool versions
+# Set your IaC tool
+default_tool: terraform
+
+# Optional: Specify tool version
 tool_versions:
   terraform: "1.6.0"
-  opentofu: "1.6.0"
-  terragrunt: "0.54.0"
 
 # Define drift detection scopes
 scopes:
@@ -33,14 +34,12 @@ scopes:
     project: "my-app"
     environment: "production"
     directory: "./terraform/core"
-    tool: "terraform"
     slack_channel: "#infra-alerts"
 
   - name: "networking-prod"
     project: "my-app"
     environment: "production"
     directory: "./terraform/networking"
-    tool: "terraform"
 ```
 
 ### 2. Create a GitHub Actions workflow
@@ -89,22 +88,25 @@ Add these secrets to your GitHub repository:
 ### `drifthound.yaml` Schema
 
 ```yaml
-# Optional: Global tool versions
-tool_versions:
-  terraform: "1.6.0"      # Specific version
-  opentofu: "1.6.0"       # Or omit for latest
-  terragrunt: "0.54.0"    # Terragrunt version
-  # IMPORTANT: If using Terragrunt, you must also specify either terraform or opentofu
-  # Terragrunt is a wrapper and requires one of these tools to be installed
+# Set the tool used across your repository
+default_tool: terragrunt  # terraform | opentofu | terragrunt
 
-# Required: Define scopes
+# Optional: Specify tool versions (or omit for latest)
+tool_versions:
+  terraform: "1.6.0"
+  opentofu: "1.6.0"
+  terragrunt: "0.54.0"
+  # Note: If using Terragrunt, specify either terraform or opentofu version
+  # Terragrunt is a wrapper and requires one of these tools
+
+# Define drift detection scopes
 scopes:
-  - name: string              # Required: Unique identifier for this scope
+  - name: string              # Required: Unique identifier
     project: string           # Required: Project name in DriftHound
-    environment: string       # Required: Environment name in DriftHound
+    environment: string       # Required: Environment (production, staging, development, etc.)
     directory: string         # Required: Path to IaC files (relative to repo root)
-    tool: string              # Required: terraform | opentofu | terragrunt
-    tool_version: string      # Optional: Override global tool version
+    tool: string              # Optional: Override default_tool for this scope
+    tool_version: string      # Optional: Override global tool version for this scope
     slack_channel: string     # Optional: Slack channel for notifications (e.g., #alerts)
 ```
 

@@ -13,6 +13,8 @@ Get DriftHound GitHub Action running in 5 minutes!
 Create `drifthound.yaml` in your repository root:
 
 ```yaml
+default_tool: terraform
+
 tool_versions:
   terraform: "1.6.0"
 
@@ -21,7 +23,6 @@ scopes:
     project: "my-app"
     environment: "production"
     directory: "./terraform"
-    tool: "terraform"
 ```
 
 ## Step 2: Add GitHub Secrets

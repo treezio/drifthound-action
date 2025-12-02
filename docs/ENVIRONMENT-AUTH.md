@@ -27,34 +27,31 @@ Create separate GitHub Actions jobs per environment, where each job:
 Group scopes by environment with clear naming:
 
 ```yaml
+default_tool: terraform
+
 scopes:
   # Production scopes
   - name: "core-prod"
     environment: "production"
     directory: "./terraform/core"
-    tool: "terraform"
 
   - name: "networking-prod"
     environment: "production"
     directory: "./terraform/networking"
-    tool: "terraform"
 
   # Staging scopes
   - name: "core-staging"
     environment: "staging"
     directory: "./terraform/core"
-    tool: "terraform"
 
   - name: "networking-staging"
     environment: "staging"
     directory: "./terraform/networking"
-    tool: "terraform"
 
   # Development scopes
   - name: "core-dev"
     environment: "development"
     directory: "./terraform/core"
-    tool: "terraform"
 ```
 
 ### Step 2: Create Environment-Specific Jobs

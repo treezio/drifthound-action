@@ -306,6 +306,63 @@ else
   fail "Invalid scope filter" "Script failed unexpectedly: $output"
 fi
 
+# Test 12: Default tool applied to scopes without tool field
+test_header "Default tool applied to scopes"
+export CONFIG_FILE="default-tool.yaml"
+unset ENVIRONMENT_FILTER SINGLE_SCOPE SCOPE_FILTER
+> "$GITHUB_OUTPUT"
+
+if output=$(bash "$PARSE_SCRIPT" 2>&1); then
+  SCOPES_JSON=$(extract_output "scopes" "$GITHUB_OUTPUT")
+
+  # Check that scope-with-default-tool has terragrunt
+  SCOPE1_TOOL=$(echo "$SCOPES_JSON" | jq -r '.[] | select(.name == "scope-with-default-tool") | .tool')
+  # Check that scope-with-override has terraform (not the default)
+  SCOPE2_TOOL=$(echo "$SCOPES_JSON" | jq -r '.[] | select(.name == "scope-with-override") | .tool')
+  # Check that another-default has terragrunt
+  SCOPE3_TOOL=$(echo "$SCOPES_JSON" | jq -r '.[] | select(.name == "another-default") | .tool')
+
+  if [[ "$SCOPE1_TOOL" == "terragrunt" ]] && [[ "$SCOPE2_TOOL" == "terraform" ]] && [[ "$SCOPE3_TOOL" == "terragrunt" ]]; then
+    if echo "$output" | grep -q "Default tool set to: terragrunt"; then
+      pass "Default tool applied correctly and overrides work"
+    else
+      fail "Default tool" "Missing default tool detection message"
+    fi
+  else
+    fail "Default tool" "Expected terragrunt/terraform/terragrunt, got: $SCOPE1_TOOL/$SCOPE2_TOOL/$SCOPE3_TOOL"
+  fi
+else
+  fail "Default tool" "Script failed: $output"
+fi
+
+# Test 13: Missing tool field without default_tool (should fail)
+test_header "Missing tool field without default_tool (should fail)"
+export CONFIG_FILE="simple-config.yaml"
+> "$GITHUB_OUTPUT"
+
+# Temporarily modify simple-config.yaml to remove tool field from a scope
+TEMP_CONFIG="/tmp/test-config-no-tool-$$"
+yq eval 'del(.scopes[0].tool)' "$FIXTURES_DIR/simple-config.yaml" > "$TEMP_CONFIG"
+export CONFIG_FILE="$TEMP_CONFIG"
+export WORKING_DIR="/"
+
+if output=$(bash "$PARSE_SCRIPT" 2>&1); then
+  fail "Missing tool without default" "Should have failed but succeeded"
+else
+  if echo "$output" | grep -q "missing the 'tool' field and no default_tool is set"; then
+    pass "Missing tool field fails with proper error"
+  else
+    fail "Missing tool without default" "Failed but with unexpected error: $output"
+  fi
+fi
+
+# Cleanup temp file
+rm -f "$TEMP_CONFIG"
+
+# Reset env vars
+export WORKING_DIR="$FIXTURES_DIR"
+unset CONFIG_FILE
+
 # Print summary
 echo ""
 echo "======================================="

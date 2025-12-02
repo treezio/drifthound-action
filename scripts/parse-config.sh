@@ -30,6 +30,12 @@ fi
 
 echo "Found $SCOPE_COUNT scope(s) in configuration"
 
+# Extract default_tool if present
+DEFAULT_TOOL=$(yq eval '.default_tool // ""' "$FULL_CONFIG_PATH")
+if [[ -n "$DEFAULT_TOOL" ]]; then
+  echo "Default tool set to: $DEFAULT_TOOL"
+fi
+
 # Filter scopes if requested
 SCOPES_TO_RUN=""
 
@@ -95,6 +101,21 @@ else
   # No filter, run all scopes
   echo "Running all scopes"
   SCOPES_JSON=$(yq eval '.scopes' "$FULL_CONFIG_PATH" | yq eval -o=json '.' -)
+fi
+
+# Apply default_tool to scopes that don't have a tool specified
+if [[ -n "$DEFAULT_TOOL" ]]; then
+  SCOPES_JSON=$(echo "$SCOPES_JSON" | jq --arg default_tool "$DEFAULT_TOOL" '
+    map(if .tool then . else . + {tool: $default_tool} end)
+  ')
+fi
+
+# Validate that all scopes have a tool defined
+MISSING_TOOL=$(echo "$SCOPES_JSON" | jq -r '[.[] | select(.tool == null or .tool == "")] | length')
+if [[ "$MISSING_TOOL" -gt 0 ]]; then
+  echo "::error::Some scopes are missing the 'tool' field and no default_tool is set"
+  echo "$SCOPES_JSON" | jq -r '.[] | select(.tool == null or .tool == "") | "  - Scope: \(.name)"'
+  exit 1
 fi
 
 # Extract unique tools needed
