@@ -10,15 +10,9 @@ A GitHub Action for running infrastructure drift detection with [DriftHound](htt
 - 🎯 **Selective checks** - Run specific scopes or filter by criteria
 - 🔐 **Environment-based auth** - Handle different credentials per environment (prod/staging/dev)
 - 📊 **Rich reporting** - GitHub Actions summary with detailed drift information
-- 🔔 **Slack notifications** - Optional Slack alerts for drift detection
+- 🔌 **Extensible outputs** - Integrate with GitHub Issues, deployment gates, metrics systems, and more
 - 🔧 **Automatic tool installation** - No need to pre-install Terraform/OpenTofu/Terragrunt
 - 🔒 **Secure** - Uses GitHub Actions secrets for sensitive data
-
-## ⚠️ Important: Multi-Environment Authentication
-
-When working with multiple environments (production, staging, development), **you must handle authentication separately for each environment**. Each environment typically requires different cloud provider credentials (e.g., different AWS roles, GCP service accounts).
-
-**Recommended Pattern:** Create separate jobs per environment in your workflow. See [examples/environment-based.yml](examples/environment-based.yml) for a complete example.
 
 ## Quick Start
 
@@ -246,52 +240,9 @@ Use action outputs in subsequent steps:
 
 ## Cloud Provider Authentication
 
-The action requires you to authenticate to your cloud providers before running drift checks.
+Authenticate to your cloud providers **before** running the DriftHound action:
 
-### ⚠️ Critical: Environment-Based Authentication
-
-**If you have multiple environments (production, staging, development), each requires different credentials.** You probably cannot authenticate once for all environments.
-
-**Solution:** Create separate jobs per environment, each with its own authentication:
-
-```yaml
-jobs:
-  drift-check-production:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Configure AWS for Production
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
-      - uses: treezio/drifthound-action@v1
-        with:
-          drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
-          drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
-          environment: production  # Filter by environment field
-
-  drift-check-staging:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Configure AWS for Staging
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_STAGING_ROLE }}
-      - uses: treezio/drifthound-action@v1
-        with:
-          drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
-          drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
-          environment: staging  # Filter by environment field
-```
-
-See [examples/environment-based.yml](examples/environment-based.yml) for a complete example.
-
-### Single Environment Examples
-
-If all your scopes use the same credentials, you can authenticate once:
-
-#### AWS
+### AWS Example
 
 ```yaml
 - name: Configure AWS credentials
@@ -299,33 +250,38 @@ If all your scopes use the same credentials, you can authenticate once:
   with:
     role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
     aws-region: us-east-1
-```
 
-#### Google Cloud Platform
-
-```yaml
-- name: Authenticate to Google Cloud
-  uses: google-github-actions/auth@v2
+- name: Run drift detection
+  uses: treezio/drifthound-action@v1
   with:
-    workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-    service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
-
-- name: Set up Cloud SDK
-  uses: google-github-actions/setup-gcloud@v2
+    drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
+    drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
 ```
 
-#### Azure
+### Multiple Environments
 
+**⚠️ Important:** If you have multiple environments (production, staging, development), each typically requires different credentials (e.g., different AWS roles).
+
+**Solution:** Create separate jobs per environment with environment-specific authentication. See the **[Environment Authentication Guide](docs/ENVIRONMENT-AUTH.md)** for detailed patterns.
+
+**Quick example:**
 ```yaml
-- name: Azure Login
-  uses: azure/login@v2
-  with:
-    creds: ${{ secrets.AZURE_CREDENTIALS }}
+jobs:
+  production:
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
+      - uses: treezio/drifthound-action@v1
+        with:
+          environment: production  # Filter to production scopes
 ```
 
-### Multiple Providers
+### Other Cloud Providers
 
-For monorepos with multiple cloud providers, see [examples/monorepo.yml](examples/monorepo.yml).
+- **GCP:** Use [`google-github-actions/auth`](https://github.com/google-github-actions/auth)
+- **Azure:** Use [`azure/login`](https://github.com/Azure/login)
+- **Multiple providers:** See [examples/monorepo.yml](examples/monorepo.yml)
 
 ## Advanced Examples
 

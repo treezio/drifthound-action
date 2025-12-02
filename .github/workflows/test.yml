@@ -164,7 +164,7 @@ jobs:
 
   # Summary job
   test-summary:
-    name: Test Summary
+    name: Testing Report
     runs-on: ubuntu-latest
     needs: [unit-tests, integration-parse-config, integration-matrix, shellcheck, check-docs]
     if: always()
