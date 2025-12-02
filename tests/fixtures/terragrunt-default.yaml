@@ -1,0 +1,9 @@
+tool_versions:
+  terragrunt: "0.54.0"
+
+scopes:
+  - name: "multi-region"
+    project: "test-project"
+    environment: "production"
+    directory: "./terragrunt/multi-region"
+    tool: "terragrunt"

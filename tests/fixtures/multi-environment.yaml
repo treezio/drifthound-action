@@ -1,0 +1,28 @@
+tool_versions:
+  terraform: "1.6.0"
+  opentofu: "1.6.0"
+
+scopes:
+  - name: "core-prod"
+    project: "test-project"
+    environment: "production"
+    directory: "./terraform/core"
+    tool: "terraform"
+
+  - name: "networking-prod"
+    project: "test-project"
+    environment: "production"
+    directory: "./terraform/networking"
+    tool: "terraform"
+
+  - name: "core-staging"
+    project: "test-project"
+    environment: "staging"
+    directory: "./terraform/core"
+    tool: "opentofu"
+
+  - name: "core-dev"
+    project: "test-project"
+    environment: "development"
+    directory: "./terraform/core"
+    tool: "terraform"

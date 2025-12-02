@@ -1,0 +1,105 @@
+# DriftHound Configuration File
+# This file defines drift detection scopes for your infrastructure
+
+# IMPORTANT: Environment-Based Authentication
+# When working with multiple environments (dev, staging, prod), you need to handle
+# authentication separately per environment in your workflow. See examples below.
+
+# Optional: Define default tool versions
+# If not specified, latest versions will be installed
+tool_versions:
+  terraform: "1.6.0"      # Required if using Terragrunt (unless opentofu is specified)
+  opentofu: "1.6.0"       # Alternative to Terraform
+  terragrunt: "0.54.0"    # Terragrunt requires either terraform or opentofu
+
+# Define scopes - each scope represents a drift check to perform
+scopes:
+  # Production Environment Scopes
+  # These should be run with production credentials
+  - name: "core-infrastructure-prod"
+    project: "my-app"
+    environment: "production"       # DriftHound environment identifier
+    directory: "./terraform/core"
+    tool: "terraform"
+    slack_channel: "#infra-alerts"
+
+  - name: "networking-prod"
+    project: "my-app"
+    environment: "production"
+    directory: "./terraform/networking"
+    tool: "terraform"
+    slack_channel: "#infra-alerts"
+
+  - name: "database-prod"
+    project: "my-app"
+    environment: "production"
+    directory: "./terraform/database"
+    tool: "terraform"
+    slack_channel: "#infra-alerts"
+
+  # Staging Environment Scopes
+  # These should be run with staging credentials
+  - name: "core-infrastructure-staging"
+    project: "my-app"
+    environment: "staging"
+    directory: "./terraform/core"
+    tool: "terraform"
+    slack_channel: "#dev-alerts"
+
+  - name: "networking-staging"
+    project: "my-app"
+    environment: "staging"
+    directory: "./terraform/networking"
+    tool: "terraform"
+    slack_channel: "#dev-alerts"
+
+  # Development Environment Scopes
+  # These should be run with development credentials
+  - name: "core-infrastructure-dev"
+    project: "my-app"
+    environment: "development"
+    directory: "./terraform/core"
+    tool: "terraform"
+
+  # Example: Terragrunt scope
+  # Terragrunt wraps Terraform/OpenTofu, so one of those will be installed automatically
+  - name: "multi-region-dev"
+    project: "my-app"
+    environment: "development"
+    directory: "./terragrunt/multi-region"
+    tool: "terragrunt"
+
+# Workflow Pattern: Environment-Based Jobs
+#
+# To handle different credentials per environment, structure your workflow like this:
+#
+# jobs:
+#   drift-check-production:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Configure AWS for Production
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
+#       - uses: treezio/drifthound-action@v1
+#         with:
+#           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
+#           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
+#           environment: production  # Simple! Just specify the environment
+#
+#   drift-check-staging:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Configure AWS for Staging
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           role-to-assume: ${{ secrets.AWS_STAGING_ROLE }}
+#       - uses: treezio/drifthound-action@v1
+#         with:
+#           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
+#           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
+#           environment: staging  # Simple! Just specify the environment
+#
+# This pattern ensures each environment job uses the correct credentials.

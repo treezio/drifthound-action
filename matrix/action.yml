@@ -1,0 +1,114 @@
+name: 'DriftHound Matrix Generator'
+description: 'Generate matrix configuration from drifthound.yaml for parallel execution'
+author: 'treezio'
+
+inputs:
+  config-file:
+    description: 'Path to drifthound.yaml configuration file'
+    required: false
+    default: 'drifthound.yaml'
+  environment:
+    description: 'Filter scopes by environment field (e.g., production, staging)'
+    required: false
+  scope-filter:
+    description: 'Comma-separated list of scope names to include (optional, includes all if not specified)'
+    required: false
+  working-directory:
+    description: 'Working directory containing the config file'
+    required: false
+    default: '.'
+
+outputs:
+  matrix:
+    description: 'JSON matrix configuration for GitHub Actions'
+    value: ${{ steps.generate.outputs.matrix }}
+  scope-count:
+    description: 'Number of scopes in the matrix'
+    value: ${{ steps.generate.outputs.scope-count }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install yq for YAML parsing
+      shell: bash
+      run: |
+        if ! command -v yq &> /dev/null; then
+          echo "Installing yq..."
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+        fi
+
+    - name: Generate matrix
+      id: generate
+      shell: bash
+      env:
+        CONFIG_FILE: ${{ inputs.config-file }}
+        ENVIRONMENT_FILTER: ${{ inputs.environment }}
+        SCOPE_FILTER: ${{ inputs.scope-filter }}
+        WORKING_DIR: ${{ inputs.working-directory }}
+      run: |
+        FULL_CONFIG_PATH="$WORKING_DIR/$CONFIG_FILE"
+
+        if [[ ! -f "$FULL_CONFIG_PATH" ]]; then
+          echo "::error::Configuration file not found: $FULL_CONFIG_PATH"
+          exit 1
+        fi
+
+        echo "Generating matrix from: $FULL_CONFIG_PATH"
+
+        # Parse scopes with priority: environment > scope-filter > all
+        if [[ -n "${ENVIRONMENT_FILTER:-}" ]]; then
+          # Filter by environment (RECOMMENDED)
+          echo "Filtering to environment: $ENVIRONMENT_FILTER"
+          # Use yq to filter and output as JSON array directly
+          SCOPES_JSON=$(yq eval "[.scopes[] | select(.environment == \"$ENVIRONMENT_FILTER\")]" "$FULL_CONFIG_PATH" -o=json)
+
+          if [[ -z "$SCOPES_JSON" || "$SCOPES_JSON" == "null" || "$SCOPES_JSON" == "[]" ]]; then
+            echo "::error::No scopes found with environment='$ENVIRONMENT_FILTER'"
+            exit 1
+          fi
+
+        elif [[ -n "${SCOPE_FILTER:-}" ]]; then
+          # Filter by scope names
+          echo "Filtering scopes: $SCOPE_FILTER"
+          IFS=',' read -ra SCOPE_ARRAY <<< "$SCOPE_FILTER"
+
+          FILTERED_SCOPES='[]'
+          for scope_name in "${SCOPE_ARRAY[@]}"; do
+            scope_name=$(echo "$scope_name" | xargs)
+            SCOPE_DATA=$(yq eval ".scopes[] | select(.name == \"$scope_name\")" "$FULL_CONFIG_PATH" | yq eval -o=json '.')
+
+            if [[ -n "$SCOPE_DATA" && "$SCOPE_DATA" != "null" ]]; then
+              FILTERED_SCOPES=$(echo "$FILTERED_SCOPES" | jq --argjson scope "$SCOPE_DATA" '. += [$scope]')
+            else
+              echo "::warning::Scope '$scope_name' not found, skipping"
+            fi
+          done
+
+          SCOPES_JSON="$FILTERED_SCOPES"
+        else
+          # No filter - include all scopes
+          SCOPES_JSON=$(yq eval '.scopes' "$FULL_CONFIG_PATH" | yq eval -o=json '.')
+        fi
+
+        SCOPE_COUNT=$(echo "$SCOPES_JSON" | jq '. | length')
+
+        if [[ "$SCOPE_COUNT" -eq 0 ]]; then
+          echo "::error::No scopes found to process"
+          exit 1
+        fi
+
+        echo "Generated matrix with $SCOPE_COUNT scope(s)"
+
+        # Create matrix with 'include' array
+        MATRIX=$(jq -n --argjson scopes "$SCOPES_JSON" '{include: $scopes}')
+
+        echo "Matrix configuration:"
+        echo "$MATRIX" | jq '.'
+
+        # Set outputs
+        echo "matrix<<EOF" >> $GITHUB_OUTPUT
+        echo "$MATRIX" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        echo "scope-count=$SCOPE_COUNT" >> $GITHUB_OUTPUT

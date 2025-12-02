@@ -1,0 +1,170 @@
+name: 'DriftHound Drift Detection'
+description: 'Run Terraform/OpenTofu/Terragrunt drift detection and report to DriftHound'
+author: 'treezio'
+
+branding:
+  icon: 'alert-triangle'
+  color: 'orange'
+
+inputs:
+  drifthound-url:
+    description: 'DriftHound API URL'
+    required: true
+  drifthound-token:
+    description: 'DriftHound API token'
+    required: true
+  config-file:
+    description: 'Path to drifthound.yaml configuration file'
+    required: false
+    default: 'drifthound.yaml'
+  scope:
+    description: 'Specific scope name to run (optional, runs all if not specified)'
+    required: false
+  scope-filter:
+    description: 'Comma-separated list of scope names to run (optional, runs all if not specified)'
+    required: false
+  environment:
+    description: 'Filter scopes by environment field (e.g., production, staging, development)'
+    required: false
+  fail-on-drift:
+    description: 'Fail the workflow if drift is detected'
+    required: false
+    default: 'false'
+  cli-version:
+    description: 'Version of drifthound-cli to install (branch, tag, or commit SHA)'
+    required: false
+    default: 'main'
+  cli-repo:
+    description: 'Repository containing drifthound-cli'
+    required: false
+    default: 'treezio/DriftHound'
+  working-directory:
+    description: 'Working directory to run the action from'
+    required: false
+    default: '.'
+
+outputs:
+  drift-detected:
+    description: 'Whether drift was detected (true/false)'
+    value: ${{ steps.summarize.outputs.drift-detected }}
+  results:
+    description: 'JSON summary of drift check results'
+    value: ${{ steps.summarize.outputs.results }}
+  scopes-run:
+    description: 'Number of scopes executed'
+    value: ${{ steps.summarize.outputs.scopes-run }}
+  scopes-with-drift:
+    description: 'Number of scopes with drift detected'
+    value: ${{ steps.summarize.outputs.scopes-with-drift }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Validate inputs
+      shell: bash
+      run: |
+        if [[ -z "${{ inputs.drifthound-url }}" ]]; then
+          echo "::error::drifthound-url is required"
+          exit 1
+        fi
+        if [[ -z "${{ inputs.drifthound-token }}" ]]; then
+          echo "::error::drifthound-token is required"
+          exit 1
+        fi
+
+    - name: Install yq for YAML parsing
+      shell: bash
+      run: |
+        if ! command -v yq &> /dev/null; then
+          echo "Installing yq..."
+          sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          sudo chmod +x /usr/local/bin/yq
+        fi
+        yq --version
+
+    - name: Install Ruby for drifthound-cli
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+
+    - name: Install drifthound-cli
+      shell: bash
+      env:
+        CLI_VERSION: ${{ inputs.cli-version }}
+        CLI_REPO: ${{ inputs.cli-repo }}
+      run: ${{ github.action_path }}/scripts/install-cli.sh
+
+    - name: Parse configuration
+      id: parse-config
+      shell: bash
+      env:
+        CONFIG_FILE: ${{ inputs.config-file }}
+        SCOPE_FILTER: ${{ inputs.scope-filter }}
+        SINGLE_SCOPE: ${{ inputs.scope }}
+        ENVIRONMENT_FILTER: ${{ inputs.environment }}
+        WORKING_DIR: ${{ inputs.working-directory }}
+      run: ${{ github.action_path }}/scripts/parse-config.sh
+
+    - name: Setup infrastructure tools
+      shell: bash
+      env:
+        TOOLS_JSON: ${{ steps.parse-config.outputs.tools }}
+      run: ${{ github.action_path }}/scripts/setup-tools.sh
+
+    - name: Run drift checks
+      id: run-checks
+      shell: bash
+      env:
+        SCOPES_JSON: ${{ steps.parse-config.outputs.scopes }}
+        DRIFTHOUND_URL: ${{ inputs.drifthound-url }}
+        DRIFTHOUND_TOKEN: ${{ inputs.drifthound-token }}
+        WORKING_DIR: ${{ inputs.working-directory }}
+      run: ${{ github.action_path }}/scripts/run-check.sh
+
+    - name: Summarize results
+      id: summarize
+      shell: bash
+      env:
+        RESULTS_FILE: ${{ steps.run-checks.outputs.results-file }}
+        FAIL_ON_DRIFT: ${{ inputs.fail-on-drift }}
+      run: |
+        if [[ ! -f "$RESULTS_FILE" ]]; then
+          echo "::error::Results file not found"
+          exit 1
+        fi
+
+        # Parse results
+        DRIFT_DETECTED=$(jq -r '.drift_detected' "$RESULTS_FILE")
+        SCOPES_RUN=$(jq -r '.scopes_run' "$RESULTS_FILE")
+        SCOPES_WITH_DRIFT=$(jq -r '.scopes_with_drift' "$RESULTS_FILE")
+        RESULTS=$(cat "$RESULTS_FILE")
+
+        # Set outputs
+        echo "drift-detected=$DRIFT_DETECTED" >> $GITHUB_OUTPUT
+        echo "scopes-run=$SCOPES_RUN" >> $GITHUB_OUTPUT
+        echo "scopes-with-drift=$SCOPES_WITH_DRIFT" >> $GITHUB_OUTPUT
+        echo "results<<EOF" >> $GITHUB_OUTPUT
+        echo "$RESULTS" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        # Display summary
+        echo "## DriftHound Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "- **Scopes checked:** $SCOPES_RUN" >> $GITHUB_STEP_SUMMARY
+        echo "- **Scopes with drift:** $SCOPES_WITH_DRIFT" >> $GITHUB_STEP_SUMMARY
+        echo "- **Drift detected:** $DRIFT_DETECTED" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+
+        # Add detailed results table
+        echo "### Detailed Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "| Scope | Status | Changes | Duration |" >> $GITHUB_STEP_SUMMARY
+        echo "|-------|--------|---------|----------|" >> $GITHUB_STEP_SUMMARY
+
+        jq -r '.scopes[] | "| \(.name) | \(.status) | +\(.add_count) ~\(.change_count) -\(.destroy_count) | \(.duration)s |"' "$RESULTS_FILE" >> $GITHUB_STEP_SUMMARY
+
+        # Fail if drift detected and fail-on-drift is true
+        if [[ "$FAIL_ON_DRIFT" == "true" && "$DRIFT_DETECTED" == "true" ]]; then
+          echo "::error::Drift detected and fail-on-drift is enabled"
+          exit 1
+        fi

@@ -1,0 +1,95 @@
+# Matrix DriftHound Workflow
+# This workflow runs drift checks in parallel using GitHub Actions matrix strategy
+# This is ideal for large monorepos with many scopes
+
+name: Infrastructure Drift Detection (Parallel)
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+jobs:
+  # First job: Generate matrix from configuration
+  prepare-matrix:
+    name: Prepare Drift Check Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+      scope-count: ${{ steps.generate.outputs.scope-count }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Generate matrix from drifthound.yaml
+        id: generate
+        uses: ./drifthound-action/matrix@v1  # Replace with your actual action path
+        with:
+          config-file: 'drifthound.yaml'
+          # Optional: filter by environment (RECOMMENDED)
+          # environment: 'production'
+          # OR filter specific scopes by name
+          # scope-filter: 'core-infrastructure-prod,networking-prod'
+
+      - name: Display matrix
+        run: |
+          echo "Generated matrix with ${{ steps.generate.outputs.scope-count }} scope(s)"
+          echo '${{ steps.generate.outputs.matrix }}' | jq '.'
+
+  # Second job: Run drift checks in parallel
+  drift-check:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: prepare-matrix
+
+    # Run in parallel for each scope
+    strategy:
+      # Continue running other jobs even if one fails
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Configure cloud provider authentication
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # Run DriftHound for this specific scope
+      - name: Run drift detection for ${{ matrix.name }}
+        uses: ./drifthound-action@v1  # Replace with your actual action path
+        with:
+          drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
+          drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
+          scope: ${{ matrix.name }}  # Run only this scope
+          # Optional: fail on drift
+          # fail-on-drift: 'true'
+
+  # Optional third job: Summarize results
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [prepare-matrix, drift-check]
+    if: always()
+
+    steps:
+      - name: Display summary
+        run: |
+          echo "## Drift Detection Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Checked ${{ needs.prepare-matrix.outputs.scope-count }} scope(s)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "View detailed results in individual job logs above." >> $GITHUB_STEP_SUMMARY
+
+      - name: Check for failures
+        if: contains(needs.*.result, 'failure')
+        run: |
+          echo "::error::One or more drift checks failed"
+          exit 1

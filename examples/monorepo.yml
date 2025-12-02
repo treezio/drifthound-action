@@ -1,0 +1,205 @@
+# Advanced Monorepo DriftHound Workflow
+# This example demonstrates advanced features for complex monorepo setups:
+# - Multiple cloud providers (AWS, GCP, Azure)
+# - Different authentication methods per scope
+# - Environment-specific configurations
+# - Conditional Slack notifications
+
+name: Monorepo Drift Detection
+
+on:
+  schedule:
+    # Check production every 6 hours
+    - cron: '0 */6 * * *'
+    # Check staging daily at 9am
+    - cron: '0 9 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to check (production, staging, or all)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - production
+          - staging
+
+jobs:
+  prepare-matrix:
+    name: Prepare Matrix
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.generate.outputs.matrix }}
+      scope-count: ${{ steps.generate.outputs.scope-count }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine scope filter
+        id: filter
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            ENV="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.event.schedule }}" == "0 9 * * *" ]]; then
+            # Daily cron - check staging
+            ENV="staging"
+          else
+            # Default - check production
+            ENV="production"
+          fi
+
+          if [[ "$ENV" == "all" ]]; then
+            echo "scope-filter=" >> $GITHUB_OUTPUT
+          else
+            # Filter scopes by environment name pattern
+            echo "scope-filter=" >> $GITHUB_OUTPUT
+            echo "environment=$ENV" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate matrix
+        id: generate
+        uses: ./drifthound-action/matrix@v1
+        with:
+          config-file: 'drifthound.yaml'
+          scope-filter: ${{ steps.filter.outputs.scope-filter }}
+
+  drift-check-aws:
+    name: AWS - ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: prepare-matrix
+    if: contains(matrix.name, 'aws')
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Run drift detection
+        uses: ./drifthound-action@v1
+        with:
+          drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
+          drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
+          scope: ${{ matrix.name }}
+
+  drift-check-gcp:
+    name: GCP - ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: prepare-matrix
+    if: contains(matrix.name, 'gcp')
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Run drift detection
+        uses: ./drifthound-action@v1
+        with:
+          drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
+          drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
+          scope: ${{ matrix.name }}
+
+  drift-check-azure:
+    name: Azure - ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    needs: prepare-matrix
+    if: contains(matrix.name, 'azure')
+
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Run drift detection
+        uses: ./drifthound-action@v1
+        with:
+          drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
+          drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
+          scope: ${{ matrix.name }}
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [prepare-matrix, drift-check-aws, drift-check-gcp, drift-check-azure]
+    if: always()
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check results
+        id: check
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "has-failures=true" >> $GITHUB_OUTPUT
+            echo "status=failure" >> $GITHUB_OUTPUT
+          else
+            echo "has-failures=false" >> $GITHUB_OUTPUT
+            echo "status=success" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Display summary
+        run: |
+          echo "## Drift Detection Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Total scopes:** ${{ needs.prepare-matrix.outputs.scope-count }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ steps.check.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check individual job logs for detailed results." >> $GITHUB_STEP_SUMMARY
+
+      # Example: Create GitHub issue if drift detected on main branch
+      # Note: DriftHound sends Slack notifications via slack_channel config
+      - name: Create issue on drift
+        if: steps.check.outputs.has-failures == 'true' && contains(github.ref, 'main')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Infrastructure Drift Detected in Monorepo',
+              body: `Drift was detected across multiple cloud providers.
+
+              **Summary:**
+              - Total scopes checked: ${{ needs.prepare-matrix.outputs.scope-count }}
+              - Status: ❌ One or more checks failed
+
+              **Next Steps:**
+              1. Review drift details in [DriftHound](${{ secrets.DRIFTHOUND_URL }})
+              2. Check individual scope results in the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+              3. Reconcile infrastructure state
+
+              DriftHound automatically sends notifications to configured Slack channels.`,
+              labels: ['infrastructure', 'drift', 'monorepo']
+            });

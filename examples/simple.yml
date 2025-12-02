@@ -1,0 +1,60 @@
+# Simple DriftHound Workflow
+# This workflow runs drift checks sequentially for all scopes defined in drifthound.yaml
+
+name: Infrastructure Drift Detection
+
+on:
+  # Run on a schedule (every 6 hours)
+  schedule:
+    - cron: '0 */6 * * *'
+
+  # Allow manual trigger
+  workflow_dispatch:
+
+  # Optional: Run on push to main
+  # push:
+  #   branches:
+  #     - main
+
+jobs:
+  drift-check:
+    name: Check Infrastructure Drift
+    runs-on: ubuntu-latest
+
+    # Set timeout to prevent hanging jobs
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Configure cloud provider authentication
+      # Example for AWS (adjust for your provider)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      # Run DriftHound action
+      - name: Run drift detection
+        id: drift
+        uses: ./drifthound-action@v1  # Replace with your actual action path
+        with:
+          drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
+          drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
+          # Optional: specify a config file path
+          # config-file: 'path/to/drifthound.yaml'
+          # Optional: fail workflow if drift is detected
+          # fail-on-drift: 'true'
+
+      # Optional: Use outputs for custom workflows
+      # Note: DriftHound sends Slack notifications via slack_channel config
+      - name: Display drift summary
+        if: always()
+        run: |
+          echo "### Drift Detection Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Drift Detected:** ${{ steps.drift.outputs.drift-detected }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Scopes Checked:** ${{ steps.drift.outputs.scopes-run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Scopes with Drift:** ${{ steps.drift.outputs.scopes-with-drift }}" >> $GITHUB_STEP_SUMMARY
