@@ -42,12 +42,13 @@ Run the unit test suite for parse-config.sh:
 ./tests/unit/test-parse-config.sh
 ```
 
-This will run 11 tests covering:
+This will run 13 tests covering:
 - Basic configuration parsing
 - Environment filtering
 - Scope filtering (single and multiple)
 - Tool extraction
 - Terragrunt dependency detection
+- Default tool configuration and overrides
 - Error handling
 
 **Expected output:**

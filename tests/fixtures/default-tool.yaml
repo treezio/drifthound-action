@@ -1,0 +1,24 @@
+tool_versions:
+  terraform: "1.6.0"
+  terragrunt: "0.54.0"
+
+default_tool: terragrunt
+
+scopes:
+  - name: "scope-with-default-tool"
+    project: "test-project"
+    environment: "production"
+    directory: "./infra/prod"
+    # No tool specified - should use default_tool
+
+  - name: "scope-with-override"
+    project: "test-project"
+    environment: "staging"
+    directory: "./infra/staging"
+    tool: terraform  # Override default_tool
+
+  - name: "another-default"
+    project: "test-project"
+    environment: "development"
+    directory: "./infra/dev"
+    # No tool specified - should use default_tool

@@ -5,12 +5,15 @@
 # When working with multiple environments (dev, staging, prod), you need to handle
 # authentication separately per environment in your workflow. See examples below.
 
-# Optional: Define default tool versions
-# If not specified, latest versions will be installed
+# Set the tool used across your repository
+# Most repositories use a single tool - specify it here once
+default_tool: terraform  # terraform | opentofu | terragrunt
+
+# Optional: Specify tool versions (or omit for latest)
 tool_versions:
-  terraform: "1.6.0"      # Required if using Terragrunt (unless opentofu is specified)
-  opentofu: "1.6.0"       # Alternative to Terraform
-  terragrunt: "0.54.0"    # Terragrunt requires either terraform or opentofu
+  terraform: "1.6.0"
+  # opentofu: "1.6.0"       # Alternative to Terraform
+  # terragrunt: "0.54.0"    # Terragrunt requires either terraform or opentofu
 
 # Define scopes - each scope represents a drift check to perform
 scopes:
@@ -18,23 +21,20 @@ scopes:
   # These should be run with production credentials
   - name: "core-infrastructure-prod"
     project: "my-app"
-    environment: "production"       # DriftHound environment identifier
+    environment: "production"
     directory: "./terraform/core"
-    tool: "terraform"
     slack_channel: "#infra-alerts"
 
   - name: "networking-prod"
     project: "my-app"
     environment: "production"
     directory: "./terraform/networking"
-    tool: "terraform"
     slack_channel: "#infra-alerts"
 
   - name: "database-prod"
     project: "my-app"
     environment: "production"
     directory: "./terraform/database"
-    tool: "terraform"
     slack_channel: "#infra-alerts"
 
   # Staging Environment Scopes
@@ -43,14 +43,12 @@ scopes:
     project: "my-app"
     environment: "staging"
     directory: "./terraform/core"
-    tool: "terraform"
     slack_channel: "#dev-alerts"
 
   - name: "networking-staging"
     project: "my-app"
     environment: "staging"
     directory: "./terraform/networking"
-    tool: "terraform"
     slack_channel: "#dev-alerts"
 
   # Development Environment Scopes
@@ -59,15 +57,14 @@ scopes:
     project: "my-app"
     environment: "development"
     directory: "./terraform/core"
-    tool: "terraform"
 
-  # Example: Terragrunt scope
-  # Terragrunt wraps Terraform/OpenTofu, so one of those will be installed automatically
+  # Example: Override the default tool for a specific scope
+  # This scope uses Terragrunt while the rest use the default_tool (terraform)
   - name: "multi-region-dev"
     project: "my-app"
     environment: "development"
     directory: "./terragrunt/multi-region"
-    tool: "terragrunt"
+    tool: "terragrunt"  # Override: use terragrunt for this specific scope
 
 # Workflow Pattern: Environment-Based Jobs
 #
