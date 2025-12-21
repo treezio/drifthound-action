@@ -1,6 +1,6 @@
 name: 'DriftHound Matrix Generator'
 description: 'Generate matrix configuration from drifthound.yaml for parallel execution'
-author: 'treezio'
+author: 'drifthoundhq'
 
 inputs:
   config-file:

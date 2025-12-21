@@ -1,6 +1,6 @@
 name: 'DriftHound Drift Detection'
 description: 'Run Terraform/OpenTofu/Terragrunt drift detection and report to DriftHound'
-author: 'treezio'
+author: 'drifthoundhq'
 
 branding:
   icon: 'alert-triangle'
@@ -37,7 +37,7 @@ inputs:
   cli-repo:
     description: 'Repository containing drifthound-cli'
     required: false
-    default: 'treezio/DriftHound'
+    default: 'drifthoundhq/DriftHound'
   working-directory:
     description: 'Working directory to run the action from'
     required: false

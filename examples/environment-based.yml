@@ -50,7 +50,7 @@ jobs:
       # Run drift detection for production scopes only
       - name: Run drift detection for production
         id: prod-drift
-        uses: treezio/drifthound-action@v1
+        uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -92,7 +92,7 @@ jobs:
 
       # Run drift detection for staging scopes only
       - name: Run drift detection for staging
-        uses: treezio/drifthound-action@v1
+        uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -123,7 +123,7 @@ jobs:
 
       # Run drift detection for development scopes only
       - name: Run drift detection for development
-        uses: treezio/drifthound-action@v1
+        uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}

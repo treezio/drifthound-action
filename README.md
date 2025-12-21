@@ -1,6 +1,6 @@
 # DriftHound GitHub Action
 
-A GitHub Action for running infrastructure drift detection with [DriftHound](https://github.com/treezio/DriftHound). This action automates drift checks for Terraform, OpenTofu, and Terragrunt projects in CI/CD pipelines, with first-class support for monorepos.
+A GitHub Action for running infrastructure drift detection with [DriftHound](https://github.com/drifthoundhq/DriftHound). This action automates drift checks for Terraform, OpenTofu, and Terragrunt projects in CI/CD pipelines, with first-class support for monorepos.
 
 ## Features
 
@@ -69,7 +69,7 @@ jobs:
 
       # Run DriftHound
       - name: Run drift detection
-        uses: treezio/drifthound-action@v1
+        uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -122,7 +122,7 @@ scopes:
 | `scope-filter` | No | - | Comma-separated list of scopes to run |
 | `fail-on-drift` | No | `false` | Fail workflow if drift is detected |
 | `cli-version` | No | `main` | drifthound-cli version (branch/tag/commit) |
-| `cli-repo` | No | `treezio/DriftHound` | Repository containing drifthound-cli |
+| `cli-repo` | No | `drifthoundhq/DriftHound` | Repository containing drifthound-cli |
 | `working-directory` | No | `.` | Working directory for the action |
 
 ## Action Outputs
@@ -141,7 +141,7 @@ scopes:
 Run all scopes sequentially:
 
 ```yaml
-- uses: treezio/drifthound-action@v1
+- uses: drifthoundhq/drifthound-action@v1
   with:
     drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
     drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -160,7 +160,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - id: generate
-        uses: treezio/drifthound-action/matrix@v1
+        uses: drifthoundhq/drifthound-action/matrix@v1
         with:
           environment: production  # Generate matrix for production only
 
@@ -175,7 +175,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
-      - uses: treezio/drifthound-action@v1
+      - uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -189,7 +189,7 @@ This combines parallel execution with environment-specific authentication!
 Run only specific scopes:
 
 ```yaml
-- uses: treezio/drifthound-action@v1
+- uses: drifthoundhq/drifthound-action@v1
   with:
     drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
     drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -201,7 +201,7 @@ Run only specific scopes:
 Fail the workflow if drift is detected:
 
 ```yaml
-- uses: treezio/drifthound-action@v1
+- uses: drifthoundhq/drifthound-action@v1
   with:
     drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
     drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -213,7 +213,7 @@ Fail the workflow if drift is detected:
 Use a different configuration file:
 
 ```yaml
-- uses: treezio/drifthound-action@v1
+- uses: drifthoundhq/drifthound-action@v1
   with:
     drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
     drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -227,7 +227,7 @@ Use action outputs in subsequent steps:
 ```yaml
 - name: Run drift detection
   id: drift
-  uses: treezio/drifthound-action@v1
+  uses: drifthoundhq/drifthound-action@v1
   with:
     drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
     drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -254,7 +254,7 @@ Authenticate to your cloud providers **before** running the DriftHound action:
     aws-region: us-east-1
 
 - name: Run drift detection
-  uses: treezio/drifthound-action@v1
+  uses: drifthoundhq/drifthound-action@v1
   with:
     drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
     drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -274,7 +274,7 @@ jobs:
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
-      - uses: treezio/drifthound-action@v1
+      - uses: drifthoundhq/drifthound-action@v1
         with:
           environment: production  # Filter to production scopes
 ```
@@ -316,7 +316,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: treezio/drifthound-action@v1
+      - uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -330,7 +330,7 @@ The action provides outputs that you can use in subsequent workflow steps:
 ```yaml
 - name: Run drift detection
   id: drift
-  uses: treezio/drifthound-action@v1
+  uses: drifthoundhq/drifthound-action@v1
   with:
     drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
     drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -474,11 +474,11 @@ MIT
 
 ## Support
 
-- **Documentation:** [DriftHound Docs](https://github.com/treezio/DriftHound)
-- **Issues:** [GitHub Issues](https://github.com/treezio/drifthound-action/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/treezio/drifthound-action/discussions)
+- **Documentation:** [DriftHound Docs](https://github.com/drifthoundhq/DriftHound)
+- **Issues:** [GitHub Issues](https://github.com/drifthoundhq/drifthound-action/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/drifthoundhq/drifthound-action/discussions)
 
 ## Related Projects
 
-- [DriftHound](https://github.com/treezio/DriftHound) - The main DriftHound application
-- [drifthound-cli](https://github.com/treezio/DriftHound/blob/main/bin/drifthound-cli) - Command-line interface for DriftHound
+- [DriftHound](https://github.com/drifthoundhq/DriftHound) - The main DriftHound application
+- [drifthound-cli](https://github.com/drifthoundhq/DriftHound/blob/main/bin/drifthound-cli) - Command-line interface for DriftHound

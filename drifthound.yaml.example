@@ -79,7 +79,7 @@ scopes:
 #         uses: aws-actions/configure-aws-credentials@v4
 #         with:
 #           role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
-#       - uses: treezio/drifthound-action@v1
+#       - uses: drifthoundhq/drifthound-action@v1
 #         with:
 #           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
 #           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -93,7 +93,7 @@ scopes:
 #         uses: aws-actions/configure-aws-credentials@v4
 #         with:
 #           role-to-assume: ${{ secrets.AWS_STAGING_ROLE }}
-#       - uses: treezio/drifthound-action@v1
+#       - uses: drifthoundhq/drifthound-action@v1
 #         with:
 #           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
 #           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}

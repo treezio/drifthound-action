@@ -58,7 +58,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Run drift detection
-        uses: treezio/drifthound-action@v1
+        uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -108,4 +108,4 @@ A: Check the workflow logs for API response errors
 
 - [Full Documentation](../README.md)
 - [Examples](../examples/)
-- [GitHub Issues](https://github.com/treezio/drifthound-action/issues)
+- [GitHub Issues](https://github.com/drifthoundhq/drifthound-action/issues)

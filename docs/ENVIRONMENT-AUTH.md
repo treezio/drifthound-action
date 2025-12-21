@@ -81,7 +81,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Run production drift checks
-        uses: treezio/drifthound-action@v1
+        uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -102,7 +102,7 @@ jobs:
           aws-region: us-east-1
 
       - name: Run staging drift checks
-        uses: treezio/drifthound-action@v1
+        uses: drifthoundhq/drifthound-action@v1
         with:
           drifthound-url: ${{ secrets.DRIFTHOUND_URL }}
           drifthound-token: ${{ secrets.DRIFTHOUND_TOKEN }}
@@ -167,7 +167,7 @@ aws-production-drift:
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       with:
         scope-filter: 'aws-core-prod,aws-networking-prod'
 
@@ -176,7 +176,7 @@ gcp-production-drift:
     - uses: google-github-actions/auth@v2
       with:
         workload_identity_provider: ${{ secrets.GCP_PROD_PROVIDER }}
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       with:
         scope-filter: 'gcp-compute-prod,gcp-storage-prod'
 ```
@@ -190,7 +190,7 @@ shared-drift:
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_SHARED_ROLE }}
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       with:
         scope-filter: 'shared-dns,shared-networking,shared-monitoring'
 
@@ -200,7 +200,7 @@ production-drift:
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       with:
         scope-filter: 'app-prod,database-prod'
 ```
@@ -241,7 +241,7 @@ drift-check:
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_ROLE }}  # Which environment?
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       # This will fail for non-matching environments
 ```
 
@@ -254,7 +254,7 @@ drift-check:
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       with:
         scope-filter: 'core-prod'
 
@@ -262,7 +262,7 @@ drift-check:
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_STAGING_ROLE }}
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       with:
         scope-filter: 'core-staging'
 ```
@@ -276,7 +276,7 @@ production:
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_PROD_ROLE }}
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       with:
         scope-filter: 'core-prod'
 
@@ -285,7 +285,7 @@ staging:
     - uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_STAGING_ROLE }}
-    - uses: treezio/drifthound-action@v1
+    - uses: drifthoundhq/drifthound-action@v1
       with:
         scope-filter: 'core-staging'
 ```
