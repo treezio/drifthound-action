@@ -113,8 +113,8 @@ Feature requests are welcome! Please:
 
 ## Questions?
 
-- Open a [Discussion](https://github.com/treezio/drifthound-action/discussions)
-- Check existing [Issues](https://github.com/treezio/drifthound-action/issues)
+- Open a [Discussion](https://github.com/drifthoundhq/drifthound-action/discussions)
+- Check existing [Issues](https://github.com/drifthoundhq/drifthound-action/issues)
 
 ## License
 

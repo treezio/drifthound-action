@@ -4,7 +4,7 @@ set -euo pipefail
 echo "::group::Installing drifthound-cli"
 
 CLI_VERSION="${CLI_VERSION:-main}"
-CLI_REPO="${CLI_REPO:-treezio/DriftHound}"
+CLI_REPO="${CLI_REPO:-drifthoundhq/DriftHound}"
 INSTALL_PATH="/usr/local/bin/drifthound"
 
 echo "Installing drifthound-cli from $CLI_REPO@$CLI_VERSION..."

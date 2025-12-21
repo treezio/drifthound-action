@@ -34,5 +34,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Initial release.
 
-[Unreleased]: https://github.com/treezio/drifthound-action/compare/v1.0.0...HEAD
-[1.0.0]: https://github.com/treezio/drifthound-action/releases/tag/v1.0.0
+[Unreleased]: https://github.com/drifthoundhq/drifthound-action/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/drifthoundhq/drifthound-action/releases/tag/v1.0.0
